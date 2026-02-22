@@ -1,4 +1,4 @@
-const state = {
+﻿const state = {
   activeView: "kube",
   kube: {
     summary: null,
@@ -8,6 +8,10 @@ const state = {
   hosts: {
     profiles: [],
     selected: "",
+  },
+  crypto: {
+    type: "base64",
+    direction: "encrypt",
   },
 };
 
@@ -36,11 +40,14 @@ const invokeNative =
   window.__TAURI__?.core?.invoke ?? window.__TAURI_INTERNALS__?.invoke ?? null;
 
 const dom = {};
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
 let toastTimer = null;
 
 window.addEventListener("DOMContentLoaded", async () => {
   collectDom();
   bindEvents();
+  updateCryptoUi();
   dom.runtimeMode.textContent = invokeNative
     ? "Tauri Runtime"
     : "浏览器预览模式（模拟数据）";
@@ -59,6 +66,7 @@ function collectDom() {
   dom.views = {
     kube: document.querySelector("#view-kube"),
     hosts: document.querySelector("#view-hosts"),
+    crypto: document.querySelector("#view-crypto"),
   };
   dom.menuItems = [...document.querySelectorAll(".menu-item")];
   dom.runtimeMode = document.querySelector("#runtime-mode");
@@ -92,6 +100,18 @@ function collectDom() {
   dom.hostsRestoreBtn = document.querySelector("#hosts-restore-btn");
   dom.hostsPreviewBtn = document.querySelector("#hosts-preview-btn");
   dom.hostsReadBtn = document.querySelector("#hosts-read-btn");
+
+  dom.cryptoType = document.querySelector("#crypto-type");
+  dom.cryptoDirection = document.querySelector("#crypto-direction");
+  dom.cryptoKey = document.querySelector("#crypto-key");
+  dom.cryptoIv = document.querySelector("#crypto-iv");
+  dom.cryptoHint = document.querySelector("#crypto-hint");
+  dom.cryptoInput = document.querySelector("#crypto-input");
+  dom.cryptoOutput = document.querySelector("#crypto-output");
+  dom.cryptoRunBtn = document.querySelector("#crypto-run-btn");
+  dom.cryptoSwapBtn = document.querySelector("#crypto-swap-btn");
+  dom.cryptoCopyBtn = document.querySelector("#crypto-copy-btn");
+  dom.cryptoClearBtn = document.querySelector("#crypto-clear-btn");
 }
 
 function bindEvents() {
@@ -194,6 +214,55 @@ function bindEvents() {
   dom.hostsReadBtn.addEventListener("click", async () => {
     await readSystemHosts();
   });
+
+  dom.cryptoType.addEventListener("change", () => {
+    state.crypto.type = dom.cryptoType.value;
+    updateCryptoUi();
+  });
+
+  dom.cryptoDirection.addEventListener("change", () => {
+    state.crypto.direction = dom.cryptoDirection.value;
+    updateCryptoUi();
+  });
+
+  dom.cryptoRunBtn.addEventListener("click", async () => {
+    await runCryptoTransform();
+  });
+
+  dom.cryptoSwapBtn.addEventListener("click", () => {
+    const input = dom.cryptoInput.value;
+    dom.cryptoInput.value = dom.cryptoOutput.value;
+    dom.cryptoOutput.value = input;
+  });
+
+  dom.cryptoCopyBtn.addEventListener("click", async () => {
+    const text = dom.cryptoOutput.value;
+    if (!text) {
+      showToast("没有可复制的输出。");
+      return;
+    }
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const tmp = document.createElement("textarea");
+        tmp.value = text;
+        document.body.appendChild(tmp);
+        tmp.select();
+        document.execCommand("copy");
+        tmp.remove();
+      }
+      showToast("已复制输出。");
+    } catch (error) {
+      showToast(`复制失败: ${String(error)}`);
+    }
+  });
+
+  dom.cryptoClearBtn.addEventListener("click", () => {
+    dom.cryptoInput.value = "";
+    dom.cryptoOutput.value = "";
+  });
 }
 
 function switchView(nextView) {
@@ -224,6 +293,183 @@ function currentConfigNameInput() {
 
 function clearConfigNameInput() {
   dom.kubeConfigName.value = "";
+}
+
+function updateCryptoUi() {
+  const type = dom.cryptoType.value;
+  const usingAes = type === "aes-gcm";
+
+  dom.cryptoKey.disabled = !usingAes;
+  dom.cryptoIv.disabled = !usingAes;
+  dom.cryptoKey.placeholder = usingAes
+    ? "密钥（AES-GCM 必填）"
+    : "该算法不需要密钥";
+  dom.cryptoIv.placeholder = usingAes
+    ? "IV（Base64，可选）"
+    : "该算法不需要 IV";
+
+  if (usingAes) {
+    if (dom.cryptoDirection.value === "encrypt") {
+      dom.cryptoHint.textContent =
+        "AES-GCM 加密输出格式：ivBase64:cipherBase64。IV 留空时自动生成。";
+    } else {
+      dom.cryptoHint.textContent =
+        "AES-GCM 解密输入支持 ivBase64:cipherBase64，或在右侧 IV 填写后只输入 cipherBase64。";
+    }
+  } else if (type === "base64") {
+    dom.cryptoHint.textContent = "Base64 支持 UTF-8 文本的编码与解码。";
+  } else if (type === "url") {
+    dom.cryptoHint.textContent = "URL 模式使用 encodeURIComponent / decodeURIComponent。";
+  } else if (type === "hex") {
+    dom.cryptoHint.textContent = "Hex 模式使用 UTF-8 与十六进制互转。";
+  } else {
+    dom.cryptoHint.textContent = "";
+  }
+}
+
+async function runCryptoTransform() {
+  const input = dom.cryptoInput.value;
+  const type = dom.cryptoType.value;
+  const direction = dom.cryptoDirection.value;
+
+  try {
+    let output = "";
+    if (type === "base64") {
+      output = direction === "encrypt" ? utf8ToBase64(input) : base64ToUtf8(input);
+    } else if (type === "url") {
+      output = direction === "encrypt" ? encodeURIComponent(input) : decodeURIComponent(input);
+    } else if (type === "hex") {
+      output = direction === "encrypt" ? utf8ToHex(input) : hexToUtf8(input);
+    } else if (type === "aes-gcm") {
+      output = await runAesGcmTransform(input, direction, dom.cryptoKey.value, dom.cryptoIv.value);
+    } else {
+      throw new Error(`不支持的算法: ${type}`);
+    }
+
+    dom.cryptoOutput.value = output;
+  } catch (error) {
+    dom.cryptoOutput.value = "";
+    showToast(`转换失败: ${String(error)}`);
+  }
+}
+
+function utf8ToBase64(text) {
+  return bytesToBase64(textEncoder.encode(text));
+}
+
+function base64ToUtf8(base64Text) {
+  return textDecoder.decode(base64ToBytes(base64Text));
+}
+
+function utf8ToHex(text) {
+  return bytesToHex(textEncoder.encode(text));
+}
+
+function hexToUtf8(hexText) {
+  return textDecoder.decode(hexToBytes(hexText));
+}
+
+async function runAesGcmTransform(input, direction, rawKey, rawIv) {
+  if (!window.crypto?.subtle) {
+    throw new Error("当前环境不支持 Web Crypto。");
+  }
+
+  const keyText = rawKey.trim();
+  if (!keyText) {
+    throw new Error("AES-GCM 需要填写密钥。");
+  }
+
+  const cryptoKey = await deriveAesKey(keyText);
+  if (direction === "encrypt") {
+    const ivBytes = rawIv.trim()
+      ? base64ToBytes(rawIv.trim())
+      : window.crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await window.crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: ivBytes },
+      cryptoKey,
+      textEncoder.encode(input)
+    );
+    return `${bytesToBase64(ivBytes)}:${bytesToBase64(new Uint8Array(encrypted))}`;
+  }
+
+  const { ivBytes, cipherBytes } = parseAesDecryptInput(input, rawIv);
+  const decrypted = await window.crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: ivBytes },
+    cryptoKey,
+    cipherBytes
+  );
+  return textDecoder.decode(new Uint8Array(decrypted));
+}
+
+async function deriveAesKey(keyText) {
+  const digest = await window.crypto.subtle.digest("SHA-256", textEncoder.encode(keyText));
+  return window.crypto.subtle.importKey("raw", digest, "AES-GCM", false, [
+    "encrypt",
+    "decrypt",
+  ]);
+}
+
+function parseAesDecryptInput(input, rawIv) {
+  const trimmedInput = input.trim();
+  if (!trimmedInput) {
+    throw new Error("AES-GCM 解密输入不能为空。");
+  }
+
+  if (trimmedInput.includes(":")) {
+    const index = trimmedInput.indexOf(":");
+    const ivPart = trimmedInput.slice(0, index).trim();
+    const cipherPart = trimmedInput.slice(index + 1).trim();
+    if (!ivPart || !cipherPart) {
+      throw new Error("AES-GCM 输入格式错误，应为 ivBase64:cipherBase64。");
+    }
+    return {
+      ivBytes: base64ToBytes(ivPart),
+      cipherBytes: base64ToBytes(cipherPart),
+    };
+  }
+
+  const ivText = rawIv.trim();
+  if (!ivText) {
+    throw new Error("AES-GCM 解密需要 IV。可使用 iv:cipher 格式输入。");
+  }
+  return {
+    ivBytes: base64ToBytes(ivText),
+    cipherBytes: base64ToBytes(trimmedInput),
+  };
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(base64Text) {
+  const normalized = base64Text.replace(/\s+/g, "");
+  const binary = atob(normalized);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function hexToBytes(hexText) {
+  const normalized = hexText.replace(/\s+/g, "").toLowerCase();
+  if (!/^[0-9a-f]*$/.test(normalized) || normalized.length % 2 !== 0) {
+    throw new Error("Hex 输入格式无效。");
+  }
+  const bytes = new Uint8Array(normalized.length / 2);
+  for (let i = 0; i < normalized.length; i += 2) {
+    bytes[i / 2] = Number.parseInt(normalized.slice(i, i + 2), 16);
+  }
+  return bytes;
 }
 
 async function refreshKube(showMsg = true) {

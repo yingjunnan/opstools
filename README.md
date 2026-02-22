@@ -1,6 +1,6 @@
 # OpsTools
 
-基于 `Tauri + Rust` 的跨平台运维开发工具（Windows / macOS），当前实现：
+基于 `Tauri + Rust` 的跨平台运维工具（Windows / macOS），当前实现：
 
 - `kubeconfig` 本地 context 快速切换
   - 支持导入本地 kubeconfig 文件并切换为当前工作文件
@@ -9,6 +9,11 @@
   - 导入时支持可选配置名；不填写时默认使用 context 名称
   - 支持恢复到系统默认 kubeconfig 路径
 - `hosts` 配置模板管理、应用、差异预览、最近备份回滚
+- `加密转换` 菜单
+  - Base64 编码/解码
+  - URL 编码/解码
+  - Hex 编码/解码
+  - AES-GCM 加密/解密
 
 ## 目录结构
 
@@ -45,4 +50,5 @@ cargo run --manifest-path .\src-tauri\Cargo.toml
 应用会在本机本地数据目录下创建 `opstools` 目录，保存：
 
 - hosts 配置模板
+- kubeconfig 列表与导入文件
 - kubeconfig / hosts 备份文件

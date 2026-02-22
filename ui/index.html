@@ -48,6 +48,16 @@
               </span>
               <span>Hosts 切换</span>
             </button>
+            <button class="menu-item" data-view="crypto">
+              <span class="menu-icon menu-icon-crypto" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect x="6" y="10" width="12" height="10" rx="2" />
+                  <path d="M9 10V7.5C9 5.57 10.57 4 12.5 4C14.43 4 16 5.57 16 7.5V10" />
+                  <path d="M12 14V16" />
+                </svg>
+              </span>
+              <span>加密转换</span>
+            </button>
           </nav>
 
           <div class="sidebar-foot">
@@ -167,6 +177,73 @@
                   <label class="section-title" for="hosts-diff">差异预览 / 输出</label>
                   <pre id="hosts-diff"></pre>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="view-crypto" class="view">
+            <div class="panel glass-soft">
+              <div class="panel-header">
+                <div>
+                  <h1>加密转换</h1>
+                  <p>内置 Base64、URL、Hex、AES-GCM，支持常见加密/解密转换。</p>
+                </div>
+              </div>
+
+              <div class="crypto-controls">
+                <select id="crypto-type" class="glass-select">
+                  <option value="base64">Base64</option>
+                  <option value="url">URL Encode</option>
+                  <option value="hex">Hex</option>
+                  <option value="aes-gcm">AES-GCM</option>
+                </select>
+                <select id="crypto-direction" class="glass-select">
+                  <option value="encrypt">加密 / 编码</option>
+                  <option value="decrypt">解密 / 解码</option>
+                </select>
+                <input
+                  id="crypto-key"
+                  class="glass-input"
+                  placeholder="密钥（AES-GCM 必填）"
+                />
+                <input
+                  id="crypto-iv"
+                  class="glass-input"
+                  placeholder="IV（Base64，可选）"
+                />
+              </div>
+
+              <div id="crypto-hint" class="meta-chip crypto-hint">
+                AES-GCM 加密输出格式：ivBase64:cipherBase64
+              </div>
+
+              <div class="crypto-grid">
+                <div class="crypto-card glass-soft">
+                  <label class="section-title" for="crypto-input">输入</label>
+                  <textarea
+                    id="crypto-input"
+                    class="crypto-textarea"
+                    spellcheck="false"
+                    placeholder="输入待转换内容"
+                  ></textarea>
+                </div>
+                <div class="crypto-card glass-soft">
+                  <label class="section-title" for="crypto-output">输出</label>
+                  <textarea
+                    id="crypto-output"
+                    class="crypto-textarea"
+                    spellcheck="false"
+                    readonly
+                    placeholder="转换结果"
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="action-row">
+                <button id="crypto-run-btn" class="action-btn primary">执行转换</button>
+                <button id="crypto-swap-btn" class="action-btn">输入输出互换</button>
+                <button id="crypto-copy-btn" class="action-btn">复制输出</button>
+                <button id="crypto-clear-btn" class="action-btn">清空</button>
               </div>
             </div>
           </section>

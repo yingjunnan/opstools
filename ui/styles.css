@@ -197,6 +197,11 @@ body {
   color: #b55c14;
 }
 
+.menu-icon-crypto {
+  background: linear-gradient(140deg, rgba(130, 170, 255, 0.34), rgba(165, 143, 255, 0.3));
+  color: #4f5ccf;
+}
+
 .menu-item.active .menu-icon {
   box-shadow: 0 7px 12px rgba(46, 134, 255, 0.2);
 }
@@ -379,6 +384,68 @@ p {
 .history-list {
   min-height: 160px;
   max-height: 240px;
+}
+
+.crypto-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.glass-select {
+  width: 100%;
+  border: 1px solid rgba(205, 223, 247, 0.95);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--text-main);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  appearance: none;
+}
+
+.glass-select:focus {
+  border-color: rgba(46, 134, 255, 0.7);
+}
+
+.crypto-hint {
+  align-self: flex-start;
+}
+
+.crypto-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  min-height: 0;
+  flex: 1;
+}
+
+.crypto-card {
+  border-radius: 18px;
+  padding: 12px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.crypto-textarea {
+  width: 100%;
+  min-height: 220px;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 227, 248, 0.95);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--text-main);
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.52;
+  resize: vertical;
+  flex: 1;
+}
+
+.crypto-textarea:focus {
+  outline: none;
+  border-color: rgba(46, 134, 255, 0.7);
 }
 
 .empty-state {
@@ -615,6 +682,14 @@ p {
   }
 
   .hosts-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .crypto-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .crypto-grid {
     grid-template-columns: 1fr;
   }
 }
