@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OpsTools</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="scene">
+      <div class="orb orb-blue"></div>
+      <div class="orb orb-pink"></div>
+      <div class="orb orb-orange"></div>
+
+      <div class="shell glass">
+        <aside class="sidebar glass-soft">
+          <div class="brand">
+            <div class="brand-dot"></div>
+            <div>
+              <div class="brand-title">OpsTools</div>
+              <div class="brand-subtitle">Tauri + Rust</div>
+            </div>
+          </div>
+
+          <nav class="menu">
+            <button class="menu-item active" data-view="kube">
+              <span class="menu-icon menu-icon-kube" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M12 4L17 7V13L12 16L7 13V7L12 4Z" />
+                  <path d="M4 12V9L7 7" />
+                  <path d="M20 12V9L17 7" />
+                  <path d="M12 20L9 18V15" />
+                  <path d="M12 20L15 18V15" />
+                </svg>
+              </span>
+              <span>Kubeconfig 切换</span>
+            </button>
+            <button class="menu-item" data-view="hosts">
+              <span class="menu-icon menu-icon-hosts" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect x="4" y="5" width="16" height="6" rx="2" />
+                  <rect x="4" y="13" width="16" height="6" rx="2" />
+                  <path d="M8 8H8.01" />
+                  <path d="M8 16H8.01" />
+                  <path d="M12 8H16" />
+                  <path d="M12 16H16" />
+                </svg>
+              </span>
+              <span>Hosts 切换</span>
+            </button>
+          </nav>
+
+          <div class="sidebar-foot">
+            <span class="dot"></span>
+            <span id="runtime-mode">运行中</span>
+          </div>
+        </aside>
+
+        <main class="main-panel">
+          <section id="view-kube" class="view active">
+            <div class="panel glass-soft">
+              <div class="panel-header">
+                <div>
+                  <h1>Kubeconfig 快速切换</h1>
+                  <p>读取 contexts，支持文件导入、粘贴导入和列表快速切换。</p>
+                </div>
+                <div class="inline-actions">
+                  <button id="kube-import-btn" class="action-btn">导入文件</button>
+                  <button id="kube-paste-btn" class="action-btn">粘贴导入</button>
+                  <button id="kube-default-btn" class="action-btn">默认路径</button>
+                  <button id="kube-refresh-btn" class="action-btn">刷新</button>
+                </div>
+                <input
+                  id="kube-file-input"
+                  type="file"
+                  accept=".yaml,.yml,.conf,.config,.txt"
+                  hidden
+                />
+              </div>
+
+              <div class="meta-row">
+                <div id="kube-path" class="meta-chip">路径：-</div>
+                <div id="kube-current" class="meta-chip">当前 context：-</div>
+              </div>
+
+              <div class="toolbar">
+                <input
+                  id="kube-config-name"
+                  class="glass-input"
+                  placeholder="配置名（可选，不填默认使用 context 名）"
+                />
+                <input
+                  id="kube-search"
+                  class="glass-input"
+                  placeholder="搜索 context 名称"
+                />
+              </div>
+
+              <div id="kube-paste-panel" class="kube-paste-panel hidden">
+                <label for="kube-paste-input" class="section-title">粘贴 kubeconfig 内容</label>
+                <textarea
+                  id="kube-paste-input"
+                  class="kube-paste-input"
+                  spellcheck="false"
+                  placeholder="apiVersion: v1&#10;kind: Config&#10;clusters: ..."
+                ></textarea>
+                <div class="action-row">
+                  <button id="kube-paste-confirm-btn" class="action-btn primary">导入粘贴内容</button>
+                  <button id="kube-paste-cancel-btn" class="action-btn">取消</button>
+                </div>
+              </div>
+
+              <div id="kube-context-list" class="list"></div>
+
+              <div class="sub-header">
+                <h2>Kubeconfig 列表</h2>
+                <button id="kube-item-refresh-btn" class="action-btn">刷新列表</button>
+              </div>
+
+              <div id="kube-item-list" class="list history-list"></div>
+            </div>
+          </section>
+
+          <section id="view-hosts" class="view">
+            <div class="panel glass-soft">
+              <div class="panel-header">
+                <div>
+                  <h1>Hosts 快速切换</h1>
+                  <p>管理 hosts 配置模板，支持应用、差异预览和最近备份回滚。</p>
+                </div>
+                <div id="hosts-latest-backup" class="meta-chip">最近备份：-</div>
+              </div>
+
+              <div class="hosts-layout">
+                <div class="hosts-left glass-soft">
+                  <div class="toolbar compact">
+                    <input
+                      id="hosts-profile-name"
+                      class="glass-input"
+                      placeholder="配置名：dev / test / prod"
+                    />
+                  </div>
+
+                  <div id="hosts-profile-list" class="list"></div>
+
+                  <div class="action-row">
+                    <button id="hosts-save-btn" class="action-btn">保存配置</button>
+                    <button id="hosts-apply-btn" class="action-btn primary">应用到系统</button>
+                  </div>
+                  <div class="action-row">
+                    <button id="hosts-delete-btn" class="action-btn danger">删除配置</button>
+                    <button id="hosts-restore-btn" class="action-btn">回滚最近备份</button>
+                  </div>
+                  <div class="action-row">
+                    <button id="hosts-preview-btn" class="action-btn">预览差异</button>
+                    <button id="hosts-read-btn" class="action-btn">读取系统 Hosts</button>
+                  </div>
+                </div>
+
+                <div class="hosts-right glass-soft">
+                  <label class="section-title" for="hosts-editor">配置内容</label>
+                  <textarea
+                    id="hosts-editor"
+                    spellcheck="false"
+                    placeholder="例如：&#10;127.0.0.1 localhost&#10;10.10.10.22 api.test.internal"
+                  ></textarea>
+                  <label class="section-title" for="hosts-diff">差异预览 / 输出</label>
+                  <pre id="hosts-diff"></pre>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div id="toast" aria-live="polite"></div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
